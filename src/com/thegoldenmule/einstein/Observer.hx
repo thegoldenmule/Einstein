@@ -38,6 +38,7 @@ class Observer extends EventDispatcher {
 	public var applyLorentzTransform:Bool;
 	
 	private inline static var C_SQUARED:Int = 1;
+	public static var SCALE:Int = 100000;
 	
 	/**
 	 * Observers are created as if they are the reference frame.
@@ -52,11 +53,12 @@ class Observer extends EventDispatcher {
 		selected = false;
 		
 		// create a basic default polygon
+		var size:Int = 1000000;
 		_polygon = [
-			new EPoint(-10, -10),
-			new EPoint(-10, 10),
-			new EPoint(10, 10),
-			new EPoint(10, -10)
+			new EPoint(-size, -size),
+			new EPoint(-size, size),
+			new EPoint(size, size),
+			new EPoint(size, -size)
 		];
 		
 		// these properties don't make sense without a reference frame
@@ -104,15 +106,15 @@ class Observer extends EventDispatcher {
 		var poly:Array<EPoint> = getPolygonForReferenceFrame();
 		for (point in poly) {
 			if (null == first) {
-				graphics.moveTo(point.x, point.y);
+				graphics.moveTo(point.x / SCALE, point.y / SCALE);
 				first = point;
 			} else {
-				graphics.lineTo(point.x, point.y);
+				graphics.lineTo(point.x / SCALE, point.y / SCALE);
 			}
 		}
 		
 		// finish figure
-		graphics.lineTo(first.x, first.y);
+		graphics.lineTo(first.x / SCALE, first.y / SCALE);
 		graphics.endFill();
 	}
 	
@@ -132,6 +134,8 @@ class Observer extends EventDispatcher {
 	 * @return
 	 */
 	private function setReferenceFrame(value:Observer):Observer {
+		if (null != _referenceFrame) _referenceFrame.removeEventListener(TimeEvent.TICK, tickHandler);
+		
 		_referenceFrame = value;
 		
 		// remove from current reference frame
@@ -139,12 +143,10 @@ class Observer extends EventDispatcher {
 		
 		if (null == _referenceFrame || _referenceFrame == this) {
 			velocity.x = velocity.y = position.x = position.y = rotation = 0;
-			
-			_referenceFrame.removeEventListener(TimeEvent.TICK, tickHandler);
 		} else {
-			velocity.subtract(_referenceFrame.velocity);
+			/*velocity.subtract(_referenceFrame.velocity);
 			position.subtract(_referenceFrame.position);
-			rotation -= _referenceFrame.rotation;
+			rotation -= _referenceFrame.rotation;*/
 			
 			if (view.contains(_referenceFrame.view)) view.removeChild(_referenceFrame.view);
 			

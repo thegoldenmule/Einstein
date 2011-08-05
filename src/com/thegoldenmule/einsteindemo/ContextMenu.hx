@@ -43,6 +43,14 @@ class ContextMenu extends Sprite {
 		_info.mouseEnabled = false;
 		addChild(_info);
 		
+		var textfield:TextField = new TextField();
+		textfield.textColor = 0xFFFFFF;
+		textfield.text = "Make Reference";
+		textfield.width = textfield.textWidth + 6;
+		textfield.x = _button.width / 2 - textfield.width / 2;
+		textfield.mouseEnabled = false;
+		_button.addChild(textfield);
+		
 		addEventListener(Event.ENTER_FRAME, enterFrameHandler, false, 0, true);
 	}
 	
@@ -75,10 +83,10 @@ class ContextMenu extends Sprite {
 		var minutes:String = Std.string(Std.int(time / 1000 / 60));
 		
 		var info:String =
-			"Velocity:\t(" + Std.string(vel.x).substr(0, 5) + "c, " + Std.string(vel.y).substr(0, 5) + "c)" +
-			"\nPosition:\t(" + Std.string(pos.x).substr(0, 5) + ", " + Std.string(pos.y).substr(0, 5) + ")" +
-			"\nRotation:\t" + Std.string(rot).substr(0, 4) +
-			"\nTime:\t\t" + minutes + ":" + seconds + ":" + hundredths;
+			"V:\t(" + Std.string(vel.x).substr(0, 5) + "c, " + Std.string(vel.y).substr(0, 5) + "c)" +
+			"\nP:\t(" + Std.string(pos.x).substr(0, 5) + ", " + Std.string(pos.y).substr(0, 5) + ")" +
+			"\nR:\t" + Std.string(rot).substr(0, 4) +
+			"\nT:\t" + minutes + ":" + seconds + ":" + hundredths;
 		
 		_info.text = info;
 	}

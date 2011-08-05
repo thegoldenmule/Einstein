@@ -24,6 +24,7 @@ class Main {
 	private static var _display:TextField;
 	private static var _button:Sprite;
 	private static var _button2:Sprite;
+	private static var _time:Float;
 	
 	static function main() {
 		init();
@@ -66,21 +67,27 @@ class Main {
 		Lib.current.addChild(_button2);
 		
 		// enterframe tick
+		_time = Date.now().getTime();
 		Lib.current.addEventListener(Event.ENTER_FRAME, tick, false, 0, true);
 	}
 	
 	private static function tick(event:Event):Void {
-		var dt:Float;
-		update();
+		var newDate:Float = Date.now().getTime();
+		var dt:Float = newDate - _time;
+		_time = newDate;
+		
+		update(dt);
 		render();
 	}
 	
-	private static function update(dt:Float = 0):Void {
+	private static function update(dt:Float):Void {
 		var observer:Observer;
 		for (observer in _observers) {
 			// add velocity to position
 			observer.position.add(observer.velocity);
 		}
+		
+		_referenceFrame.tick(dt);
 	}
 	
 	private static function render():Void {
@@ -107,6 +114,7 @@ class Main {
 		_referenceFrame.render();
 		_referenceFrame.view.x = Lib.current.stage.stageWidth / 2 - _referenceFrame.view.width / 2;
 		_referenceFrame.view.y = Lib.current.stage.stageHeight / 2 - _referenceFrame.view.height / 2;
+		_referenceFrame.view.addEventListener(MouseEvent.CLICK, clickHandler, false, 0, true);
 		Lib.current.addChild(_referenceFrame.view);
 		
 		// create some observers
@@ -138,6 +146,8 @@ class Main {
 	}
 	
 	private static function buttonClickHandler(event:MouseEvent):Void {
+		_menu.stopTracking();
+		
 		createObservers();
 	}
 	

@@ -3,13 +3,15 @@ package com.thegoldenmule.einstein;
 import com.thegoldenmule.logging.SOSTrace;
 import flash.display.Graphics;
 import flash.display.MovieClip;
+import flash.errors.Error;
+import flash.events.EventDispatcher;
 
 /**
  * ...
  * @author thegoldenmule
  */
 
-class Observer {
+class Observer extends EventDispatcher {
 	
 	/**
 	 * This property is the frame of reference for this object.
@@ -21,7 +23,8 @@ class Observer {
 	 * These properties are defined relative to this observer.
 	 */
 	private var _polygon:Array<EPoint>;
-	public var time:Float;
+	private var _time:Float;
+	public var time(getTime, null):Float;
 	
 	/**
 	 * These properties are defined relative to the reference frame.
@@ -40,6 +43,8 @@ class Observer {
 	 * Observers are created as if they are the reference frame.
 	 */
 	public function new() {
+		super();
+		
 		// default to relativisticness
 		applyLorentzTransform = true;
 		
@@ -58,11 +63,57 @@ class Observer {
 		position = new EPoint();
 		velocity = new EPoint();
 		rotation = 0;
-		time = 0;
+		_time = 0;
 		
 		// create a view
 		view = new MovieClip();
 		view.observer = this;
+	}
+	
+	/**
+	 * This should only be called if this is the reference frame. It should be
+	 * called with how much time has passed (dt).
+	 * 
+	 * @param	dt
+	 */
+	public function tick(dt:Float):Void {
+		if (null != _referenceFrame) {
+			throw new Error("Cannot tick non-reference frame.");
+		}
+		
+		_time += dt;
+		
+		dispatchEvent(new TimeEvent(TimeEvent.TICK, dt));
+	}
+	
+	/**
+	 * Renders observer relative to the reference frame.
+	 */
+	public function render():Void {
+		// prepare graphics
+		var graphics:Graphics = view.graphics;
+		graphics.clear();
+		graphics.beginFill(0, 0);
+		graphics.drawCircle(position.x, position.y, 20);
+		graphics.endFill();
+		graphics.beginFill(null == referenceFrame ? 0xCC0000 : 0xCCCCCC);
+		
+		// draw polygon relative to reference frame
+		var point:EPoint;
+		var first:EPoint = null;
+		var poly:Array<EPoint> = getPolygonForReferenceFrame();
+		for (point in poly) {
+			if (null == first) {
+				graphics.moveTo(point.x, point.y);
+				first = point;
+			} else {
+				graphics.lineTo(point.x, point.y);
+			}
+		}
+		
+		// finish figure
+		graphics.lineTo(first.x, first.y);
+		graphics.endFill();
 	}
 	
 	/**
@@ -88,6 +139,8 @@ class Observer {
 		
 		if (null == _referenceFrame || _referenceFrame == this) {
 			velocity.x = velocity.y = position.x = position.y = rotation = 0;
+			
+			_referenceFrame.removeEventListener(TimeEvent.TICK, tickHandler);
 		} else {
 			velocity.subtract(_referenceFrame.velocity);
 			position.subtract(_referenceFrame.position);
@@ -96,9 +149,21 @@ class Observer {
 			if (view.contains(_referenceFrame.view)) view.removeChild(_referenceFrame.view);
 			
 			_referenceFrame.view.addChild(view);
+			
+			// listen for time
+			_referenceFrame.addEventListener(TimeEvent.TICK, tickHandler, false, 0, true);
 		}
 		
 		return _referenceFrame;
+	}
+	
+	/**
+	 * Getter for this observer's time.
+	 * 
+	 * @return
+	 */
+	private function getTime():Float {
+		return applyLorentzTransform ? _time : (null == _referenceFrame) ? _time : _referenceFrame.time;
 	}
 	
 	/**
@@ -144,29 +209,13 @@ class Observer {
 	}
 	
 	/**
-	 * Renders observer relative to the reference frame.
+	 * Called when time has passed relative to the reference frame.
+	 * 
+	 * @param	event
 	 */
-	public function render():Void {
-		// prepare graphics
-		var graphics:Graphics = view.graphics;
-		graphics.clear();
-		graphics.beginFill(null == referenceFrame ? 0xCC0000 : 0xCCCCCC);
-		
-		// draw polygon relative to reference frame
-		var point:EPoint;
-		var first:EPoint = null;
-		var poly:Array<EPoint> = getPolygonForReferenceFrame();
-		for (point in poly) {
-			if (null == first) {
-				graphics.moveTo(point.x, point.y);
-				first = point;
-			} else {
-				graphics.lineTo(point.x, point.y);
-			}
-		}
-		
-		// finish figure
-		graphics.lineTo(first.x, first.y);
-		graphics.endFill();
+	private function tickHandler(event:TimeEvent):Void {
+		// we need to translate the time that has passed for the reference frame
+		// into the time that has passed for us using Lorentz transformation.
+		_time += event.dt * Math.sqrt(1 - velocity.magnitude() / C_SQUARED);
 	}
 }

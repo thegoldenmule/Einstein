@@ -28,4 +28,8 @@ class EPoint {
 		this.x += vector.x;
 		this.y += vector.y;
 	}
+	
+	public function magnitude():Float {
+		return Math.sqrt(x * x + y * y);
+	}
 }

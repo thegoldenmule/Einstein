@@ -39,6 +39,8 @@ class ContextMenu extends Sprite {
 		_info.textColor = 0x76EE00;
 		_info.y = _button.height + 10;
 		_info.height = Lib.current.stage.stageHeight - _info.y;
+		_info.width = 200;
+		_info.mouseEnabled = false;
 		addChild(_info);
 		
 		addEventListener(Event.ENTER_FRAME, enterFrameHandler, false, 0, true);
@@ -67,10 +69,16 @@ class ContextMenu extends Sprite {
 		var pos:EPoint = _observer.position;
 		var rot:Float = _observer.rotation;
 		
+		var time:Float = _observer.time;
+		var hundredths:String = Std.string(Std.int(time % 1000));
+		var seconds:String = Std.string(Std.int(time / 1000));
+		var minutes:String = Std.string(Std.int(time / 1000 / 60));
+		
 		var info:String =
-			"V: (" + Std.string(vel.x).substr(0, 5) + "c, " + Std.string(vel.y).substr(0, 5) + "c)" +
-			"\nP: " + Std.string(pos.x).substr(0, 5) + ", " + Std.string(pos.y).substr(0, 5) + ")" +
-			"\nR: " + Std.string(rot).substr(0, 4);
+			"Velocity:\t(" + Std.string(vel.x).substr(0, 5) + "c, " + Std.string(vel.y).substr(0, 5) + "c)" +
+			"\nPosition:\t(" + Std.string(pos.x).substr(0, 5) + ", " + Std.string(pos.y).substr(0, 5) + ")" +
+			"\nRotation:\t" + Std.string(rot).substr(0, 4) +
+			"\nTime:\t\t" + minutes + ":" + seconds + ":" + hundredths;
 		
 		_info.text = info;
 	}

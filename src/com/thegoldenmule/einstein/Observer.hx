@@ -91,7 +91,7 @@ class Observer extends EventDispatcher {
 	/**
 	 * Renders observer relative to the reference frame.
 	 */
-	public function render():Void {
+	public function debugRender():Void {
 		// prepare graphics
 		var graphics:Graphics = view.graphics;
 		graphics.clear();
@@ -134,14 +134,18 @@ class Observer extends EventDispatcher {
 	 * @return
 	 */
 	private function setReferenceFrame(value:Observer):Observer {
-		if (null != _referenceFrame) _referenceFrame.removeEventListener(TimeEvent.TICK, tickHandler);
+		// stop listening to reference frame and remove from view
+		if (null != _referenceFrame) {
+			_referenceFrame.removeEventListener(TimeEvent.TICK, tickHandler);
+			_referenceFrame.view.removeChild(view);
+		}
 		
+		// save new value
 		_referenceFrame = value;
 		
-		// remove from current reference frame
-		if (null != view.parent) view.parent.removeChild(view);
-		
-		if (null == _referenceFrame || _referenceFrame == this) {
+		// this observer is the new reference frame
+		if (null == _referenceFrame || this == _referenceFrame) {
+			// zero these properties--they don't make sense if this observer is our reference frame
 			velocity.x = velocity.y = position.x = position.y = rotation = 0;
 		} else {
 			/*velocity.subtract(_referenceFrame.velocity);

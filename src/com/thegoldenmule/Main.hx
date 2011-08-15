@@ -1,9 +1,11 @@
 package com.thegoldenmule;
 
 import com.thegoldenmule.einstein.Integrator;
+import com.thegoldenmule.einstein.TimeEvent;
 import com.thegoldenmule.einsteindemo.ContextMenu;
 import com.thegoldenmule.einstein.EPoint;
 import com.thegoldenmule.einstein.Observer;
+import com.thegoldenmule.einstein.Universe;
 import com.thegoldenmule.einsteindemo.ContextMenuEvent;
 import com.thegoldenmule.logging.SOSTrace;
 import flash.display.Sprite;
@@ -20,13 +22,11 @@ import net.hires.debug.Stats;
 
 class Main {
 	
-	private static var _referenceFrame:Observer;
-	private static var _observers:Array<Observer> = null;
+	private static var _universe:Universe;
 	private static var _menu:ContextMenu;
 	private static var _display:TextField;
 	private static var _button:Sprite;
 	private static var _button2:Sprite;
-	private static var _time:Float;
 	private static var _container:Sprite;
 	
 	static function main() {
@@ -40,13 +40,18 @@ class Main {
 		// stats
 		Lib.current.addChild(new Stats());
 		
-		// new menu
+		// container for observers
+		_container = new Sprite();
+		
+		// menu
 		_menu = new ContextMenu();
 		_menu.y = 100;
 		_menu.addEventListener(ContextMenuEvent.SWITCH_REFERENCE_FRAMES, switchReferenceFrameHandler, false, 0, true);
 		
+		// create universe
+		_universe = new Universe();
+		
 		// create observers
-		_container = new Sprite();
 		createObservers();
 		
 		// add label
@@ -91,37 +96,20 @@ class Main {
 		_button2.addEventListener(MouseEvent.CLICK, button2ClickHandler, false, 0, true);
 		Lib.current.addChild(_button2);
 		
-		// enterframe tick
-		_time = Date.now().getTime();
-		Lib.current.addEventListener(Event.ENTER_FRAME, tick, false, 0, true);
-		
+		// add container
 		Lib.current.addChild(_container);
-	}
-	
-	private static function tick(event:Event):Void {
-		var newDate:Float = Date.now().getTime();
-		var dt:Float = newDate - _time;
-		_time = newDate;
 		
-		update(dt);
-		render();
+		// listen + start big bang
+		_universe.addEventListener(TimeEvent.TICK, render, false, 0, true);
+		_universe.start();
 	}
 	
-	private static function update(dt:Float):Void {
+	private static function render(event:TimeEvent):Void {
+		// render each observer
 		var observer:Observer;
-		for (observer in _observers) {
-			// integrate
-			Integrator.update(observer, dt);
-		}
-		
-		_referenceFrame.tick(dt);
-	}
-	
-	private static function render():Void {
-		// now render each observer
-		var observer:Observer;
-		for (observer in _observers) {
-			observer.render();
+		var observers:Array<Observer> = _universe.observers;
+		for (observer in observers) {
+			observer.debugRender();
 		}
 	}
 	
@@ -129,29 +117,24 @@ class Main {
 		var observer:Observer;
 		
 		// remove old observers
-		if (null != _observers) {
-			for (observer in _observers) {
-				observer.view.parent.removeChild(observer.view);
-			}
-			_referenceFrame = null;
+		var observers:Array<Observer> = _universe.observers;
+		for (observer in observers) {
+			observer.view.parent.removeChild(observer.view);
 		}
 		
 		// create reference frame
-		_referenceFrame = new Observer();
-		_referenceFrame.render();
-		_referenceFrame.view.x = Lib.current.stage.stageWidth / 2 - _referenceFrame.view.width / 2;
-		_referenceFrame.view.y = Lib.current.stage.stageHeight / 2 - _referenceFrame.view.height / 2;
-		_referenceFrame.view.addEventListener(MouseEvent.CLICK, clickHandler, false, 0, true);
-		_container.addChild(_referenceFrame.view);
+		var referenceFrame:Observer = new Observer();
+		referenceFrame.debugRender();
+		referenceFrame.view.x = Lib.current.stage.stageWidth / 2 - referenceFrame.view.width / 2;
+		referenceFrame.view.y = Lib.current.stage.stageHeight / 2 - referenceFrame.view.height / 2;
+		referenceFrame.view.addEventListener(MouseEvent.CLICK, clickHandler, false, 0, true);
+		_container.addChild(referenceFrame.view);
+		_universe.referenceFrame = referenceFrame;
 		
 		// create some observers
-		_observers = new Array<Observer>();
 		var i:Int = 0;
 		for (i in 0...100) {
 			observer = new Observer();
-			
-			// first thing's first--set the reference frame for this observer
-			observer.referenceFrame = _referenceFrame;
 			
 			// assign a random position relative to the reference frame
 			observer.position.x = Math.random() * i * 25;
@@ -167,8 +150,8 @@ class Main {
 			// listen for clicks to display menu
 			observer.view.addEventListener(MouseEvent.CLICK, clickHandler, false, 0, true);
 			
-			// add to our array
-			_observers.push(observer);
+			// add to our universe
+			_universe.addObserver(observer);
 		}
 	}
 	
@@ -181,7 +164,8 @@ class Main {
 	private static function button2ClickHandler(event:MouseEvent):Void {
 		var classic:Bool = false;
 		var observer:Observer = null;
-		for (observer in _observers) {
+		var observers:Array<Observer> = _universe.observers;
+		for (observer in observers) {
 			observer.applyLorentzTransform = !observer.applyLorentzTransform;
 			classic = !observer.applyLorentzTransform;
 		}
@@ -190,7 +174,7 @@ class Main {
 	}
 	
 	private static function clickHandler(event:MouseEvent):Void {
-		_menu.startTracking(_referenceFrame, event.target.observer);
+		_menu.startTracking(_universe.referenceFrame, event.target.observer);
 		
 		// add to stage...
 		Lib.current.addChild(_menu);
@@ -199,28 +183,6 @@ class Main {
 	private static function switchReferenceFrameHandler(event:ContextMenuEvent):Void {
 		_menu.stopTracking();
 		
-		// remove all observers
-		var observer:Observer;
-		_referenceFrame.view.parent.removeChild(_referenceFrame.view);
-		for (observer in _observers) {
-			observer.view.parent.removeChild(observer.view);
-		}
 		
-		// switch 'em
-		_observers.push(_referenceFrame);
-		_referenceFrame = event.observer;
-		
-		var observers:Array<Observer> = new Array<Observer>();
-		for (observer in _observers) {
-			if (observer != _referenceFrame) {
-				observer.referenceFrame = _referenceFrame;
-				observers.push(observer);
-			}
-		}
-		_observers = observers;
-		
-		// tell the reference frame it is the reference frame
-		// (this will zero position, velocity, rotation, etc.)
-		_referenceFrame.referenceFrame = null;
 	}
 }
